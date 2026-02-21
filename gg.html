@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>기상 입력</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, "Noto Sans KR", sans-serif;
+      background: #dde3f0;
+      color: #0f172a;
+      padding: 32px 16px;
+    }
+    .card {
+      max-width: 620px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #94a3b8;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 12px 18px;
+      border-bottom: 2px solid #1e3a8a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e3a8a;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .card-header small { font-size: 11px; font-weight: 400; color: #bfdbfe; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #94a3b8; padding: 7px 9px; vertical-align: middle; text-align: center; }
+    th { background: #e2e8f4; font-size: 12px; font-weight: 800; color: #1e293b; }
+
+    /* 시정 / 현재기상 행 */
+    tr.top td { background: #dbeafe; border-bottom: 2px solid #3b82f6; }
+    .top-lbl { font-size: 12px; font-weight: 800; color: #1d4ed8; }
+    .grp { display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
+    .grp b { font-size: 12px; font-weight: 800; color: #1d4ed8; white-space: nowrap; flex-shrink: 0; }
+    .grp small { font-size: 12px; font-weight: 700; color: #475569; white-space: nowrap; }
+
+    input, select {
+      width: 100%; height: 30px;
+      border: 1px solid #94a3b8; border-radius: 6px;
+      padding: 0 6px; font-size: 13px; font-weight: 600;
+      outline: none; background: #fff; color: #0f172a; text-align: center; cursor: pointer;
+    }
+    input:focus, select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+    .vis { width: 46px; flex-shrink: 0; }
+
+    /* 하늘상태 헤더 */
+    .sky { background: #2563eb; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; }
+
+    /* 총운량 / cig 분할 */
+    td.side { padding: 0; height: 1px; }
+    .side-in { display: flex; flex-direction: column; height: 100%; font-size: 12px; font-weight: 800; color: #1e293b; }
+    .side-in > * { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .side-in > * + * { border-top: 1px solid #94a3b8; }
+    .side-in b { background: #e2e8f4; }
+
+    /* 하단 */
+    .footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; padding: 10px 16px;
+      border-top: 2px solid #94a3b8; background: #f1f5f9;
+    }
+    .toggles { display: flex; gap: 8px; flex-wrap: wrap; }
+    .toggle {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 700; color: #1e293b;
+      padding: 4px 10px; border: 1px solid #94a3b8; border-radius: 7px; background: #fff;
+    }
+    .sw { position: relative; width: 36px; height: 20px; display: inline-block; flex-shrink: 0; }
+    .sw input { display: none; }
+    .sl { position: absolute; inset: 0; background: #cbd5e1; border-radius: 99px; border: 1px solid #94a3b8; transition: .15s; }
+    .sl::after {
+      content: ""; position: absolute; width: 16px; height: 16px;
+      left: 1px; top: 50%; transform: translateY(-50%);
+      background: #fff; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: .15s;
+    }
+    .sw input:checked + .sl { background: #2563eb; border-color: #1d4ed8; }
+    .sw input:checked + .sl::after { left: 18px; }
+
+    .actions { display: flex; gap: 6px; }
+    button {
+      height: 30px; padding: 0 14px; border-radius: 7px;
+      border: 1px solid #94a3b8; background: #fff;
+      font-size: 12px; font-weight: 700; color: #1e293b; cursor: pointer; transition: background .1s;
+    }
+    button:hover { background: #e2e8f4; }
+    .pri { background: #2563eb; border-color: #1d4ed8; color: #fff; }
+    .pri:hover { background: #1d4ed8; }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .footer { flex-direction: column; align-items: stretch; }
+      .actions { justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      기상 관측 입력
+      <small>자동 토글 · 초기화 / 적용</small>
+    </div>
+
+    <table>
+      <colgroup>
+        <col style="width:72px"/>
+        <col/>
+        <col/>
+        <col style="width:72px"/>
+        <col style="width:72px"/>
+      </colgroup>
+      <tbody id="tbody">
+
+        <tr class="top">
+          <td class="top-lbl">시정</td>
+          <td>
+            <div class="grp">
+              <input class="vis" type="text" maxlength="2" inputmode="numeric"/>
+              <small>00M</small>
+            </div>
+          </td>
+          <td colspan="2">
+            <div class="grp">
+              <b>현재기상</b>
+              <input type="text"/>
+            </div>
+          </td>
+          <td></td>
+        </tr>
+
+        <tr>
+          <th colspan="5" class="sky">하늘상태</th>
+        </tr>
+
+        <tr>
+          <th></th><th>운량</th><th>운고</th><th>CB</th>
+          <td rowspan="5" class="side">
+            <div class="side-in">
+              <div></div><b>총운량</b><div></div><b>cig</b><div></div>
+            </div>
+          </td>
+        </tr>
+        <!-- 1~4층: JS 생성 -->
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div class="toggles">
+        <div class="toggle">
+          <span>10분 자동</span>
+          <label class="sw"><input type="checkbox"/><span class="sl"></span></label>
+        </div>
+        <div class="toggle">
+          <span>55분 자동</span>
+          <label class="sw"><input type="checkbox"/><span class="sl"></span></label>
+        </div>
+      </div>
+      <div class="actions">
+        <button type="button">초기화</button>
+        <button class="pri" type="button">적용</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const amtOpts = '<option value=""></option>' + [...Array(9)].map((_,i) => `<option>${i}</option>`).join('');
+    const cbOpts  = '<option value=""></option><option>CB</option>';
+    const tbody   = document.getElementById('tbody');
+    for (let i = 1; i <= 4; i++) {
+      tbody.insertAdjacentHTML('beforeend',
+        `<tr><th>${i}층</th><td><select>${amtOpts}</select></td><td><input type="text"></td><td><select>${cbOpts}</select></td></tr>`
+      );
+    }
+  </script>
+</body>
+</html>
